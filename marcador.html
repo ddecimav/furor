@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>MARCADOR FUROR</title>
+<style>
+body { font-family: 'Arial Black', Arial, sans-serif; background:#111; color:white; text-align:center; margin:0; padding:0; }
+.container { display:flex; justify-content: space-between; margin:20px; gap:10px; }
+.team { background:linear-gradient(135deg,#1e3c72,#2a5298); padding:30px; border-radius:15px; width:500px; box-shadow: 0 0 20px rgba(0,0,0,0.5); display:flex; flex-direction:column; align-items:center; position:relative; }
+button { margin:3px; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; border:none; color:white; background:#ff6f61; transition:0.2s; font-size:1em; }
+button:hover { background:#ff4d3c; }
+.comodin-btn { display:block; margin:5px auto; background:#ffca28; color:#111; font-size:0.95em; }
+.comodin-desc { font-size:0.85em; margin-bottom:8px; color:#ffe082; }
+#rouletteA, #rouletteB { background:#222; border-radius:50%; margin-top:15px; }
+.score-display { font-size:2.8em; font-weight:bold; color:#ffd700; margin-bottom:10px; text-align:center; }
+.button-group { display:flex; justify-content:center; flex-wrap:nowrap; flex-direction:row; gap:5px; flex-shrink:0; }
+.effect { position:absolute; border-radius:50%; pointer-events:none; opacity:0; transform:translate(-50%, -50%) scale(0); transition: opacity 0.5s, transform 0.5s; }
+h1 { margin-top:15px; }
+</style>
+</head>
+<body>
+<h1 style="color:#ffd700; text-shadow:2px 2px #000;">MARCADOR FUROR</h1>
+<div class="container">
+  <div class="team" id="teamA">
+    <h2>Equipo A</h2>
+    <div class="score-display">Puntos: <span id="scoreA">0</span></div>
+    <div class="button-group">
+      <button onclick="addPoints('A',1)">+1</button>
+      <button onclick="addPoints('A',2)">+2</button>
+      <button onclick="addPoints('A',3)">+3</button>
+      <button onclick="stealPoints('A',1)">Roba 1</button>
+      <button onclick="stealPoints('A',2)">Roba 2</button>
+      <button onclick="stealPoints('A',3)">Roba 3</button>
+    </div>
+    <canvas id="rouletteA" width="200" height="200"></canvas>
+    <button onclick="spinRoulette('A')" id="spinA">Girar ruleta</button>
+    <div id="comodinesA"></div>
+  </div>
+
+  <div class="team" id="teamB">
+    <h2>Equipo B</h2>
+    <div class="score-display">Puntos: <span id="scoreB">0</span></div>
+    <div class="button-group">
+      <button onclick="addPoints('B',1)">+1</button>
+      <button onclick="addPoints('B',2)">+2</button>
+      <button onclick="addPoints('B',3)">+3</button>
+      <button onclick="stealPoints('B',1)">Roba 1</button>
+      <button onclick="stealPoints('B',2)">Roba 2</button>
+      <button onclick="stealPoints('B',3)">Roba 3</button>
+    </div>
+    <canvas id="rouletteB" width="200" height="200"></canvas>
+    <button onclick="spinRoulette('B')" id="spinB">Girar ruleta</button>
+    <div id="comodinesB"></div>
+  </div>
+</div>
+
+<audio id="soundFail" src=""></audio>
+<audio id="soundWin" src="https://freesound.org/data/previews/66/66717_931655-lq.mp3"></audio> <!-- sonido campanas -->
+
+<script>
+let scores = {A:0, B:0};
+let comodines = {A:[], B:[]};
+const maxComodines = 3;
+const comodinList = [
+  {name:'Puntos x2',desc:'Duplica los puntos de la siguiente prueba'},
+  {name:'Puntos x3',desc:'Triplica los puntos de la siguiente prueba'},
+  {name:'Puntos x0',desc:'Anula los puntos del equipo contrario'},
+  {name:'Tirar de nuevo',desc:'Permite volver a tirar la ruleta'},
+  {name:'Huevito',desc:'Evita perder puntos en la prueba actual'},
+  {name:'Antirobo',desc:'Protege de que el rival te robe puntos'},
+  {name:'Eliminar comodín contrario',desc:'Quita un comodín al rival'},
+  {name:'Doble turno',desc:'Realizas dos pruebas consecutivas'},
+  {name:'Pasa el turno',desc:'Fuerza al rival a hacer la prueba'},
+  {name:'Sorpresa',desc:'El equipo elige cuál comodín será este'}
+];
+
+function addPoints(team, pts){
+  scores[team] += pts;
+  document.getElementById('score'+team).innerText = scores[team];
+}
+function stealPoints(team, pts){
+  let rival = team==='A'?'B':'A';
+  scores[team] += pts;
+  scores[rival] -= pts;
+  if(scores[rival]<0) scores[rival]=0;
+  document.getElementById('score'+team).innerText = scores[team];
+  document.getElementById('score'+rival).innerText = scores[rival];
+}
+
+function addComodin(team, comodin){
+  if(comodines[team].length>=maxComodines) return;
+  comodines[team].push(comodin);
+  renderComodines(team);
+}
+
+function renderComodines(team){
+  const div = document.getElementById('comodines'+team);
+  div.innerHTML='';
+  comodines[team].forEach((c,i)=>{
+    const btn = document.createElement('button');
+    btn.className='comodin-btn';
+    btn.innerText=c.name;
+    const desc = document.createElement('div');
+    desc.className='comodin-desc';
+    desc.innerText = c.desc;
+    btn.onclick=()=>{
+      spawnEffect(team);
+      document.getElementById('soundWin').play();
+      comodines[team].splice(i,1);
+      renderComodines(team);
+    };
+    div.appendChild(btn);
+    div.appendChild(desc);
+  });
+}
+
+function spawnEffect(team){
+  const div = document.getElementById('team'+team);
+  const effect = document.createElement('div');
+  effect.className='effect';
+  effect.style.width='120px';
+  effect.style.height='120px';
+  effect.style.background='radial-gradient(circle, #ffd700, transparent)';
+  effect.style.left='50%';
+  effect.style.top='50%';
+  effect.style.opacity='1';
+  effect.style.transform='translate(-50%, -50%) scale(1)';
+  div.appendChild(effect);
+  setTimeout(()=>{
+    effect.style.opacity='0';
+    effect.style.transform='translate(-50%, -50%) scale(0)';
+  },100);
+  setTimeout(()=>{div.removeChild(effect);},600);
+}
+
+function spinRoulette(team){
+  if(comodines[team].length>=maxComodines){
+    return;
+  }
+  const canvas = document.getElementById('roulette'+team);
+  const ctx = canvas.getContext('2d');
+  const sectors = 100;
+  const angle = 2*Math.PI/sectors;
+  const comodinPositions = [];
+  while(comodinPositions.length<10){
+    let pos = Math.floor(Math.random()*sectors);
+    if(!comodinPositions.includes(pos)) comodinPositions.push(pos);
+  }
+
+  let result = Math.floor(Math.random()*sectors);
+  let rotation = 0;
+  let targetRotation = 8*Math.PI + result*angle;
+
+  let anim = setInterval(()=>{
+    rotation += 0.25;
+    drawRoulette(canvas, sectors, angle, comodinPositions, rotation);
+    if(rotation>=targetRotation){
+      clearInterval(anim);
+      if(comodinPositions.includes(result)){
+        document.getElementById('soundWin').play();
+        spawnEffect(team);
+        let comodinIndex = Math.floor(Math.random()*comodinList.length);
+        let comodin = JSON.parse(JSON.stringify(comodinList[comodinIndex]));
+        if(comodin.name==='Sorpresa'){
+          let choice = prompt('Elegir comodín para Sorpresa (1-9):\n1:Puntos x2,2:Puntos x3,3:Puntos x0,4:Tirar de nuevo,5:Huevito,6:Antirobo,7:Eliminar comodín contrario,8:Doble turno,9:Pasa el turno');
+          let idx = parseInt(choice)-1;
+          if(idx>=0 && idx<=8) comodin = JSON.parse(JSON.stringify(comodinList[idx]));
+        }
+        addComodin(team, comodin);
+      }
+    }
+  },20);
+}
+
+function drawRoulette(canvas, sectors, angle, comodinPositions, rotation){
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const r = canvas.width/2;
+  const start = Math.floor(sectors/2)-5;
+  const end = Math.floor(sectors/2)+5;
+  for(let i=start;i<=end;i++){
+    ctx.beginPath();
+    ctx.moveTo(r,r);
+    ctx.arc(r,r,r,i*angle+rotation,(i+1)*angle+rotation);
+    ctx.fillStyle = comodinPositions.includes(i%sectors)?'#ff4d4d':'#444';
+    ctx.fill();
+    ctx.strokeStyle='#222';
+    ctx.stroke();
+  }
+  ctx.fillStyle='yellow';
+  ctx.beginPath();
+  ctx.moveTo(r,r-10);
+  ctx.lineTo(r+20,r);
+  ctx.lineTo(r,r+10);
+  ctx.fill();
+}
+</script>
+</body>
+</html>

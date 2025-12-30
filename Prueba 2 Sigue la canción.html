@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Prueba 2 - Sigue la canción</title>
+<style>
+body { margin:0; font-family:'Segoe UI', Arial, sans-serif; background:#0b0e1a; color:white; text-align:center;}
+header { padding:20px; background:#111;}
+h1 { font-size:50px; color:#00ccff; margin-bottom:10px; }
+#description { font-size:20px; margin-bottom:20px; max-width:900px; margin-left:auto; margin-right:auto; }
+#timer { font-size:80px; margin:20px 0; }
+.ruleta { margin:20px auto; padding:20px; width:400px; border:3px solid #333; background:#222; font-size:28px; height:80px; line-height:40px; }
+button { font-size:22px; padding:10px 20px; margin:5px; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<header>
+<h1>Sigue la canción</h1>
+<div id="description">
+Se pondrá una canción, quien haya tirado la ruleta deberá continuar cantándola hasta que acabe el tiempo. 0 fallos = 3 puntos, 1 fallo = 2, 2 fallos =1, 3 fallos =0. Tiempo: 30 segundos.
+</div>
+</header>
+
+<div id="timer">30</div>
+
+<div class="ruleta" id="ruleta">Pulsa GIRAR para asignar número</div>
+<button id="girar">🎡 GIRAR</button>
+
+<div>
+<button onclick="startTimer()">▶ Iniciar Temporizador</button>
+<button onclick="pauseTimer()">⏸ Pausar</button>
+<button onclick="resetTimer()">⏹ Reset</button>
+</div>
+
+<!-- Sonidos -->
+<audio id="tickSound"><source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg"></audio>
+<audio id="gongSound"><source src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg" type="audio/ogg"></audio>
+<audio id="spinSound"><source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" type="audio/ogg"></audio>
+
+<script>
+let numeros = Array.from({length:20},(_,i)=>i+1);
+let usadas = [];
+const ruletaEl = document.getElementById("ruleta");
+const spinSound = document.getElementById("spinSound");
+const tickSound = document.getElementById("tickSound");
+const gongSound = document.getElementById("gongSound");
+
+document.getElementById("girar").addEventListener("click",()=>{
+  if(numeros.length===0){ alert("Todos los números usados"); return; }
+  let index=Math.floor(Math.random()*numeros.length);
+  let num=numeros.splice(index,1)[0];
+  usadas.push(num);
+  ruletaEl.innerText=num;
+  spinSound.play();
+});
+
+let time=30;
+document.getElementById("timer").innerText=time;
+let timer=null;
+
+function startTimer(){
+  if(timer) return;
+  timer=setInterval(()=>{
+    time--;
+    document.getElementById("timer").innerText=time;
+    if(time<=10 && time>3) tickSound.play();
+    if(time<=10 && time>3) document.getElementById("timer").style.color="yellow";
+    if(time<=3 && time>0) document.getElementById("timer").style.color="red";
+    if(time<=0){ clearInterval(timer); timer=null; document.getElementById("timer").innerText=0; gongSound.play(); alert("¡Tiempo terminado!"); }
+  },1000);
+}
+function pauseTimer(){ clearInterval(timer); timer=null; }
+function resetTimer(){ clearInterval(timer); timer=null; time=30; document.getElementById("timer").innerText=time; document.getElementById("timer").style.color="white"; numeros=numeros.concat(usadas); usadas=[]; }
+</script>
+
+</body>
+</html>
